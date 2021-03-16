@@ -1,0 +1,321 @@
+# Below are the import statements 
+
+from ibapi.wrapper import *
+from ibapi.client import *
+from ibapi.contract import *
+from ibapi.order import *
+from threading import Thread
+import queue
+import datetime
+import time
+import math
+import json
+import websocket
+ 
+# Below is the TestWrapper/EWrapper class
+
+'''Here we will override the methods found inside api files'''
+
+Five = float
+Four = float
+Three = float
+Two = float
+One = float
+
+class TestWrapper(EWrapper):
+
+     # error handling methods
+    def init_error(self):
+        error_queue = queue.Queue()
+        self.my_errors_queue = error_queue
+
+    def is_error(self):
+        error_exist = not self.my_errors_queue.empty()
+        return error_exist
+
+    def get_error(self, timeout=6):
+        if self.is_error():
+            try:
+                return self.my_errors_queue.get(timeout=timeout)
+            except queue.Empty:
+                return None
+        return None
+
+    def error(self, id, errorCode, errorString):
+        ## Overrides the native method
+        errormessage = "IB returns an error with %d errorcode %d that says %s" % (id, errorCode, errorString)
+        #self.my_errors_queue.put(errormessage)
+
+    # time handling methods
+    def init_time(self):
+        time_queue = queue.Queue()
+        self.my_time_queue = time_queue
+        return time_queue
+
+    def currentTime(self, server_time):
+        ## Overriden method
+        self.my_time_queue.put(server_time)
+
+    
+# Below is the TestClient/EClient Class 
+
+'''Here we will call our own methods, not overriding the api methods'''
+
+class TestClient(EClient):
+
+    def __init__(self, wrapper):
+    ## Set up with a wrapper inside
+        EClient.__init__(self, wrapper)
+
+    def server_clock(self):
+
+        print("Asking server for Unix time")     
+
+        # Creates a queue to store the time
+        time_storage = self.wrapper.init_time()
+
+        # Sets up a request for unix time from the Eclient 
+        self.reqCurrentTime()
+                  
+        #Specifies a max wait time if there is no connection
+        max_wait_time = 10
+
+        try:
+            requested_time = time_storage.get(timeout = max_wait_time)
+        except queue.Empty:
+            print("The queue was empty or max time reached")
+            requested_time = None
+
+        while self.wrapper.is_error():
+            print("Error:")
+            print(self.get_error(timeout=5))
+
+        return requested_time
+
+# Below is TestApp Class
+
+class TestApp(TestWrapper, TestClient):
+    #Intializes our main classes 
+    def __init__(self, ipaddress, portid, clientid):
+        TestWrapper.__init__(self)
+        TestClient.__init__(self, wrapper=self)
+
+        #Connects to the server with the ipaddress, portid, and clientId specified in the program execution area
+        self.connect(ipaddress, portid, clientid)
+
+        #Initializes the threading
+        thread = Thread(target = self.run)
+        thread.start()
+        setattr(self, "_thread", thread)
+
+        #Starts listening for errors 
+        self.init_error() 
+
+# Below is the program execution
+
+if __name__ == '__main__':
+
+    print("before start")
+
+    # Specifies that we are on local host with port 7497 (paper trading port number)
+    app = TestApp("127.0.0.1", 7497, 0)     
+
+    # A printout to show the program began
+    print("The program has begun")
+
+    #assigning the return from our clock method to a variable 
+    requested_time = app.server_clock()
+
+    #printing the return from the server
+    print("This is the current time from the server " )
+    print(requested_time)
+
+    # Optional disconnect. If keeping an open connection to the input don't disconnet
+    # app.disconnect()
+
+# Below is the API management
+
+
+
+
+
+One = float
+Two = float
+Three = float
+Four = float
+Five = float
+Six = float
+Seven = float
+Eight = float
+Nine = float
+
+OneZero = float
+OneOne = float
+OneTwo = float
+OneThree = float
+OneFour = float
+OneFive = float
+OneSix = float
+OneSeven = float
+OneEight = float
+OneNine = float
+
+TwoZero = float
+TwoOne = float
+TwoTwo = float
+TwoThree = float
+TwoFour = float
+TwoFive = float
+TwoSix = float
+TwoSeven = float
+TwoEight = float
+TwoNine = float
+
+ThreeZero = float
+ThreeOne = float
+ThreeTwo = float
+ThreeThree = float
+ThreeFour = float
+ThreeFive = float
+ThreeSix = float
+ThreeSeven = float
+ThreeEight = float
+ThreeNine = float
+
+FourZero = float
+FourOne = float
+FourTwo = float
+FourThree = float
+FourFour = float
+FourFive = float
+FourSix = float
+FourSeven = float
+FourEight = float
+FourNine = float
+
+def on_message(ws, message):
+    print(message)
+        
+    #load the json to a string
+    resp = json.loads(message)
+
+    #print the resp
+    #print (resp)
+
+    #extract an element in the response
+    
+    price = resp['data'][0]['p']
+    
+    print(price)
+
+    
+    
+    
+    
+    global One
+    global Two
+    global Three
+    global Four
+    global Five
+    global Six
+    global Seven
+    global Eight
+    global Nine
+    global Ten
+
+    Five = Four
+    Four = Three
+    Three = Two
+    Two = One
+    One = price
+
+    print(Five)
+    print(Four)
+    print(Three)
+    print(Two)
+    print(One)
+    print("Test Test")
+
+    TwoToOne = ((One-Two)/Two)*100
+    print(TwoToOne)
+
+def on_error(ws, error):
+    print(error)
+
+def on_close(ws):
+    print("### closed ###")
+
+def on_open(ws):
+    ws.send('{"type":"subscribe","symbol":"AAPL"}')
+
+if __name__ == "__main__":
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("wss://ws.finnhub.io?token=bsncoqvrh5r9m81dt3ng",
+                              on_message = on_message,
+                              on_error = on_error,
+                              on_close = on_close)
+    ws.on_open = on_open
+    ws.run_forever()
+
+# Below are the custom classes and methods 
+
+def contractCreate():
+    # Fills out the contract object
+    contract1 = Contract()  # Creates a contract object from the import
+    contract1.symbol = "AAPL"   # Sets the ticker symbol 
+    contract1.secType = "STK"   # Defines the security type as stock
+    contract1.currency = "USD"  # Currency is US dollars 
+    # In the API side, NASDAQ is always defined as ISLAND in the exchange field
+    contract1.exchange = "SMART"
+    # contract1.PrimaryExch = "NYSE"
+    return contract1    # Returns the contract object
+
+def orderCreate():
+    # Fills out the order object 
+    order1 = Order()    # Creates an order object from the import
+    order1.action = "BUY"   # Sets the order action to buy
+    order1.orderType = "MKT"    # Sets order type to market buy
+    order1.transmit = True
+    order1.totalQuantity = 10   # Setting a static quantity of 10 
+    return order1   # Returns the order object 
+
+def orderExecution():
+    print("Called: negative")
+    #Places the order with the returned contract and order objects 
+    contractObject = contractCreate()
+    orderObject = orderCreate()
+    nextID = 100
+    app.placeOrder(nextID, contractObject, orderObject)
+    print("order was placed")
+
+"""<summary>
+#/ A Market order is an order to buy or sell at the market bid or offer price. A market order may increase the likelihood of a fill 
+#/ and the speed of execution, but unlike the Limit order a Market order provides no price protection and may fill at a price far 
+#/ lower/higher than the current displayed bid/ask.
+#/ Products: BOND, CFD, EFP, CASH, FUND, FUT, FOP, OPT, STK, WAR
+</summary>"""
+
+#Algorithm
+
+
+
+# Calls the order execution function at the end of the program
+
+time.sleep(3)   # Wait three seconds
+orderExecution()
+
+@staticmethod
+
+
+
+def MarketOrder(action:str, quantity:float):
+    
+    
+    #! [market]
+    order = Order()
+    order.action = action
+    order.orderType = "MKT"
+    order.totalQuantity = quantity
+    #! [market]
+    return order
+
